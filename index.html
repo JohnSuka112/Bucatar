@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bucătarul Fit - Vision Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #050505; color: white; -webkit-tap-highlight-color: transparent; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
+        .glass { background: rgba(18, 18, 18, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .neon-lime { color: #DFFF4F; }
+        .bg-neon { background-color: #DFFF4F; }
+        .animate-pulse-slow { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        /* Stiluri pentru a preveni scroll-ul orizontal pe mobil */
+        input, button { outline: none !important; }
+    </style>
+</head>
+<body class="pb-10">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-40 glass px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+            <i data-lucide="dumbbell" class="neon-lime"></i>
+            <h1 class="font-black italic uppercase tracking-tighter text-lg">Bucătarul<span class="neon-lime">Fit</span></h1>
+        </div>
+        <button onclick="toggleConfig(true)" class="p-2 text-zinc-500 hover:text-white transition-colors">
+            <i data-lucide="settings" size="20"></i>
+        </button>
+    </header>
+
+    <!-- Modal Configurare API -->
+    <div id="apiModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 hidden animate-in fade-in duration-300">
+        <div class="bg-[#111] border border-white/10 w-full max-w-sm rounded-[2.5rem] p-8 space-y-6 shadow-2xl">
+            <div class="text-center">
+                <h2 class="text-xl font-black uppercase italic">Setări API Gemini</h2>
+                <p class="text-[10px] text-zinc-500 font-bold uppercase mt-2">Necesar pentru a recunoaște poze și a genera rețete</p>
+            </div>
+            <div class="space-y-4">
+                <input type="password" id="apiKeyInput" placeholder="Introdu API Key aici..." class="w-full bg-black border border-zinc-800 rounded-2xl py-4 px-4 text-sm text-white focus:border-[#DFFF4F] transition-all">
+                <button onclick="saveApiKey()" class="w-full bg-neon text-black py-4 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-transform">Salvează</button>
+                <div class="space-y-2 pt-2">
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank" class="flex items-center justify-center gap-2 text-[10px] text-zinc-400 hover:text-white transition-colors">
+                        Obține cheia gratuită aici <i data-lucide="external-link" size="12"></i>
+                    </a>
+                    <p class="text-[9px] text-zinc-600 text-center leading-relaxed">Cheia este salvată doar în browser-ul tău local (LocalStorage).</p>
+                </div>
+                <button onclick="toggleConfig(false)" class="w-full text-zinc-500 text-[9px] font-bold uppercase tracking-widest pt-2">Închide</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-md mx-auto p-4 space-y-6">
+        <!-- Selectori Mod & Obiectiv -->
+        <div class="space-y-3">
+            <div class="flex bg-zinc-900/50 rounded-2xl p-1 border border-white/5">
+                <button onclick="setFlex('strict')" id="btn-strict" class="flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all bg-zinc-800 neon-lime">Strict</button>
+                <button onclick="setFlex('moderat')" id="btn-moderat" class="flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all text-zinc-400">Moderat</button>
+                <button onclick="setFlex('creativ')" id="btn-creativ" class="flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all text-zinc-400">Creativ</button>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="setGoal('masa')" id="goal-masa" class="py-3 rounded-2xl border-2 border-[#DFFF4F] bg-[#DFFF4F]/5 neon-lime text-[10px] font-black uppercase">Bulk</button>
+                <button onclick="setGoal('definire')" id="goal-definire" class="py-3 rounded-2xl border-2 border-zinc-900 text-zinc-500 text-[10px] font-black uppercase">Cut</button>
+                <button onclick="setGoal('energie')" id="goal-energie" class="py-3 rounded-2xl border-2 border-zinc-900 text-zinc-500 text-[10px] font-black uppercase">Power</button>
+            </div>
+        </div>
+
+        <!-- Inventar cu Camera -->
+        <div class="bg-[#111] border border-white/5 rounded-3xl p-5 shadow-xl space-y-4">
+            <div class="flex gap-2">
+                <div class="relative flex-1">
+                    <input type="text" id="ingInput" placeholder="Adaugă manual..." class="w-full bg-black border-zinc-800 border rounded-2xl py-4 pl-4 pr-12 text-sm focus:border-[#DFFF4F] transition-all text-white">
+                    <button onclick="triggerCamera()" class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-[#DFFF4F] p-2 transition-colors">
+                        <i data-lucide="camera" size="20"></i>
+                    </button>
+                </div>
+                <button onclick="addIng()" class="bg-neon text-black w-12 rounded-2xl font-black text-xl active:scale-95 transition-transform">+</button>
+            </div>
+            
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleImage(event)">
+
+            <div id="loadingScanner" class="hidden flex items-center justify-center gap-2 py-2 text-[#DFFF4F]">
+                <i data-lucide="scan" class="animate-pulse-slow" size="16"></i>
+                <span class="text-[10px] font-black uppercase tracking-widest">AI-ul analizează poza...</span>
+            </div>
+
+            <div id="ingList" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <button id="generateBtn" onclick="generate()" class="w-full py-5 rounded-[2rem] bg-neon text-black font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-[0_10px_30px_-10px_rgba(223,255,79,0.4)]">
+            <i data-lucide="chef-hat" size="18"></i> GENEREAZĂ REȚETA
+        </button>
+
+        <!-- Rezultat Card -->
+        <div id="resultCard" class="hidden animate-in slide-in-from-bottom-10 fade-in duration-700 bg-[#111] border border-white/10 rounded-[2.5rem] p-6 space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <span id="recipeMeta" class="bg-[#DFFF4F]/10 neon-lime text-[9px] font-black px-3 py-1 rounded-full border border-[#DFFF4F]/20 uppercase tracking-widest"></span>
+                <i data-lucide="zap" class="neon-lime" size="18"></i>
+            </div>
+            <h2 id="recipeTitle" class="text-2xl font-black italic uppercase leading-tight tracking-tighter"></h2>
+            
+            <div class="grid grid-cols-3 gap-2" id="macros"></div>
+
+            <div id="extraNeeded" class="hidden p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
+                <p class="text-[8px] font-black text-orange-500 uppercase mb-2 tracking-widest flex items-center gap-2">
+                    <i data-lucide="shopping-cart" size="12"></i> Mai ai nevoie de:
+                </p>
+                <p id="extraList" class="text-[11px] text-zinc-300 font-medium"></p>
+            </div>
+
+            <div class="space-y-4" id="steps"></div>
+
+            <div class="mt-6 p-4 bg-[#DFFF4F]/5 border border-[#DFFF4F]/10 rounded-2xl">
+                <p id="expertNote" class="text-[11px] text-zinc-400 italic leading-relaxed"></p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let ingredients = [];
+        let flex = 'strict';
+        let goal = 'masa';
+        let apiKey = localStorage.getItem('fit_chef_key') || '';
+
+        window.onload = () => {
+            lucide.createIcons();
+            if(!apiKey) toggleConfig(true);
+        };
+
+        function toggleConfig(show) {
+            const modal = document.getElementById('apiModal');
+            modal.classList.toggle('hidden', !show);
+            if(show) document.getElementById('apiKeyInput').value = apiKey;
+        }
+
+        function saveApiKey() {
+            const val = document.getElementById('apiKeyInput').value.trim();
+            if(val) {
+                localStorage.setItem('fit_chef_key', val);
+                apiKey = val;
+                toggleConfig(false);
+            }
+        }
+
+        function triggerCamera() {
+            document.getElementById('cameraInput').click();
+        }
+
+        async function handleImage(event) {
+            const file = event.target.files[0];
+            if (!file || !apiKey) {
+                if(!apiKey) toggleConfig(true);
+                return;
+            }
+
+            document.getElementById('loadingScanner').classList.remove('hidden');
+            
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Data = e.target.result.split(',')[1];
+                await scanImage(base64Data);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function scanImage(base64Data) {
+            const prompt = "Analizează această imagine de alimente/ingrediente. Returnează DOAR o listă scurtă cu numele lor în română, separate prin virgulă (Ex: Pui, Orez, Brocoli). Dacă nu sunt alimente, scrie 'nimic'.";
+            
+            try {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: prompt },
+                                { inlineData: { mimeType: "image/jpeg", data: base64Data } }
+                            ]
+                        }]
+                    })
+                });
+
+                const data = await resp.json();
+                if(data.error) throw new Error(data.error.message);
+                
+                const text = data.candidates[0].content.parts[0].text;
+                
+                if (text && text.toLowerCase().trim() !== 'nimic') {
+                    const detected = text.split(',').map(s => s.trim().replace(/\.$/, ""));
+                    detected.forEach(item => {
+                        if(item && !ingredients.includes(item)) ingredients.push(item);
+                    });
+                    renderIngs();
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Eroare la scanare. Verifică cheia API în setări.");
+            } finally {
+                document.getElementById('loadingScanner').classList.add('hidden');
+                document.getElementById('cameraInput').value = ''; // Reset input
+            }
+        }
+
+        function setFlex(f) {
+            flex = f;
+            ['strict', 'moderat', 'creativ'].forEach(x => {
+                document.getElementById('btn-' + x).className = `flex-1 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${x === f ? 'bg-zinc-800 neon-lime' : 'text-zinc-400'}`;
+            });
+        }
+
+        function setGoal(g) {
+            goal = g;
+            ['masa', 'definire', 'energie'].forEach(x => {
+                document.getElementById('goal-' + x).className = `py-3 rounded-2xl border-2 text-[10px] font-black uppercase transition-all ${x === g ? 'border-[#DFFF4F] bg-[#DFFF4F]/5 neon-lime' : 'border-zinc-900 text-zinc-500'}`;
+            });
+        }
+
+        function addIng() {
+            const input = document.getElementById('ingInput');
+            const val = input.value.trim();
+            if(val) {
+                val.split(',').forEach(v => {
+                    const clean = v.trim();
+                    if(clean && !ingredients.includes(clean)) ingredients.push(clean);
+                });
+                renderIngs();
+                input.value = '';
+            }
+        }
+
+        function renderIngs() {
+            const list = document.getElementById('ingList');
+            list.innerHTML = ingredients.map((ing, i) => `
+                <div class="bg-zinc-900 border border-white/5 pl-3 pr-2 py-2 rounded-xl flex items-center gap-2 font-bold text-[10px] uppercase animate-in zoom-in duration-200">
+                    ${ing}
+                    <button onclick="ingredients.splice(${i},1); renderIngs()" class="text-zinc-600 hover:text-red-500 transition-colors"><i data-lucide="x-circle" size="14"></i></button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function generate() {
+            if(!apiKey) return toggleConfig(true);
+            if(ingredients.length === 0) return alert("Adaugă ingrediente sau fă o poză!");
+
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="animate-spin" data-lucide="loader-2"></i> CALCULĂM MACROS...';
+            lucide.createIcons();
+
+            const prompt = `Ești nutriționist sportiv. Ingrediente disponibile: ${ingredients.join(', ')}. Flexibilitate rețetă: ${flex}. Obiectiv fitness: ${goal}. Răspunde strict JSON în română: {"titlu":"string","extra":["string"],"timp":number,"calorii":"string","macros":{"p":"g","c":"g","g":"g"},"pasi":["string"],"nota":"string"}`;
+
+            try {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        contents: [{ parts: [{ text: prompt }] }], 
+                        generationConfig: { responseMimeType: "application/json" } 
+                    })
+                });
+
+                const data = await resp.json();
+                if(data.error) throw new Error(data.error.message);
+                
+                const res = JSON.parse(data.candidates[0].content.parts[0].text);
+                showResult(res);
+            } catch (e) {
+                console.error(e);
+                alert("Eroare la generare. Verifică API Key.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="chef-hat"></i> GENEREAZĂ REȚETA';
+                lucide.createIcons();
+            }
+        }
+
+        function showResult(res) {
+            const card = document.getElementById('resultCard');
+            card.classList.remove('hidden');
+            
+            document.getElementById('recipeMeta').innerText = `${res.timp} MIN • ${res.calorii}`;
+            document.getElementById('recipeTitle').innerText = res.titlu;
+            document.getElementById('expertNote').innerText = `"${res.nota}"`;
+            
+            document.getElementById('macros').innerHTML = `
+                <div class="bg-black p-3 rounded-2xl border border-white/5 text-center"><p class="neon-lime text-lg font-black">${res.macros.p}</p><p class="text-zinc-600 text-[8px] font-bold uppercase">Prot</p></div>
+                <div class="bg-black p-3 rounded-2xl border border-white/5 text-center"><p class="text-white text-lg font-black">${res.macros.c}</p><p class="text-zinc-600 text-[8px] font-bold uppercase">Carbs</p></div>
+                <div class="bg-black p-3 rounded-2xl border border-white/5 text-center"><p class="text-zinc-400 text-lg font-black">${res.macros.g}</p><p class="text-zinc-600 text-[8px] font-bold uppercase">Fat</p></div>
+            `;
+
+            const extraEl = document.getElementById('extraNeeded');
+            if(res.extra && res.extra.length > 0) {
+                extraEl.classList.remove('hidden');
+                document.getElementById('extraList').innerText = res.extra.join(', ');
+            } else {
+                extraEl.classList.add('hidden');
+            }
+
+            document.getElementById('steps').innerHTML = res.pasi.map((p, i) => `
+                <div class="flex gap-3"><span class="neon-lime font-black italic">0${i+1}</span><p class="text-xs text-zinc-400 leading-relaxed font-medium">${p}</p></div>
+            `).join('');
+
+            window.scrollTo({ top: card.offsetTop - 50, behavior: 'smooth' });
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
+
